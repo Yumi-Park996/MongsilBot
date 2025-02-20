@@ -11,12 +11,12 @@ public class MongsilBot {
         String llmKey = System.getenv("LLM_KEY");
         // ✅ 1. 랜덤 질문 생성 (위로 메시지 요청)
         String[] questions = {
-            "뀨우뀨우 안녕! 몽실아, 오늘도 힘들게 하루를 보낸 집사님을 위해 250자 이내의 따뜻한 위로 메시지를 전해줄래?🐹💖",
-            "뀨우뀨우 안녕! 몽실아, 누군가 오늘 힘든 하루를 보냈대. 위로가 될 수 있는 250자 이내의 다정한 메시지를 전해볼래?🐹💖",
-            "뀨우뀨우 안녕! 몽실아, 집사님이 지쳤대. 네가 줄 수 있는 250자 이내의 가장 따뜻한 격려와 응원의 말을 해줄 수 있을까?🐹💖",
-            "뀨우뀨우 안녕! 몽실아, 오늘 하루도 열심히 살아낸 집사님에게 너의 사랑스러운 말로 힘이 되는 250자 이내의 메시지를 전해줘!🐹💖",
-            "뀨우뀨우 안녕! 몽실아, 때로는 힘든 날도 있는 법이지? 지금 힘들어하는 사람들에게 너만의 방식으로 용기를 250자 이내의 메시지로 줄 수 있을까?🐹💖",
-            "뀨우뀨우 안녕! 몽실아, 세상은 가끔 힘들지만, 너의 귀여운 응원이 있다면 괜찮아질 것 같아. 위로와 용기의 메시지를 250자 이내로 보내줄래?🐹💖"
+            "뀨우뀨우 안녕! 몽실아, 오늘도 힘들게 하루를 보낸 집사님을 위해 300자 이내의 따뜻한 위로와 명언 메시지를 전해줄래?🐹💖",
+            "뀨우뀨우 안녕! 몽실아, 누군가 오늘 힘든 하루를 보냈대. 위로가 될 수 있는 300자 이내의 다정한 메시지와 명언을 전해볼래?🐹💖",
+            "뀨우뀨우 안녕! 몽실아, 집사님이 지쳤대. 네가 줄 수 있는 300자 이내의 가장 따뜻한 격려와 응원의 말과 명언을 전달해줄 수 있을까?🐹💖",
+            "뀨우뀨우 안녕! 몽실아, 오늘 하루도 열심히 살아낸 집사님에게 너의 사랑스러운 말로 힘이 되는 300자 이내의 메시지와 명언을 전해줘!🐹💖",
+            "뀨우뀨우 안녕! 몽실아, 때로는 힘든 날도 있는 법이지? 지금 힘들어하는 사람들에게 너만의 방식으로 용기와 명언을 300자 이내의 메시지로 줄 수 있을까?🐹💖",
+            "뀨우뀨우 안녕! 몽실아, 세상은 가끔 힘들지만, 너의 귀여운 응원이 있다면 괜찮아질 것 같아. 위로와 용기의 메시지와 명언을 300자 이내로 보내줄래?🐹💖"
         };
         String question = questions[new Random().nextInt(questions.length)];
 
@@ -24,6 +24,7 @@ public class MongsilBot {
 
         // ✅ 2. Gemini API 요청
         String llmResponseText = getGeminiResponse(llmUrl, llmKey, question);
+        String slackMessage = "🦙 *몽실봇*\n\n*질문:* " + question + "\n*답변:* " + llmResponseText;
         System.out.println("🤖 몽실이의 답변: " + llmResponseText);
 
         // ✅ 3. Gemini API 요청 (이미지 생성)
@@ -31,7 +32,7 @@ public class MongsilBot {
         System.out.println("🖼️ 생성된 이미지 URL: " + imageUrl);
 
         // ✅ 4. Slack으로 메시지 전송 (이미지 포함)
-        sendToSlack(webhookUrl, llmResponseText, imageUrl);
+        sendToSlack(webhookUrl, slackMessage, imageUrl);
     }
 
     // ✅ Gemini API 호출 함수 (텍스트 응답)
@@ -111,6 +112,7 @@ public class MongsilBot {
         String requestBody = "{"
             + "\"text\": \"" + message.replace("\"", "\\\"") + "\","
             + "\"attachments\": [{"
+            + "\"text\": \"몽실이의 따뜻한 위로 메시지와 함께 이미지를 확인하세요!\","
             + "\"image_url\": \"" + imageUrl + "\","
             + "\"fallback\": \"이미지를 불러올 수 없습니다.\""
             + "}]"
@@ -125,6 +127,9 @@ public class MongsilBot {
                 .build();
 
             HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString());
+
+            // ✅ Slack 응답을 확인해서 오류 여부 확인
+            System.out.println("📩 Slack API 응답: " + response.body());
 
             if (response.statusCode() == 200) {
                 System.out.println("✅ Slack 메시지 전송 완료!");
