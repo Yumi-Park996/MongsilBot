@@ -1,7 +1,7 @@
 name: send message
 
 on:
-    workflow_dispatch:
+  workflow_dispatch:
 
 jobs:
   send-message:
@@ -23,3 +23,5 @@ jobs:
         env:
           SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
           SLACK_WEBHOOK_MSG: ${{ vars.SLACK_WEBHOOK_MSG }}
+          LLM_URL: ${{ vars.LLM_URL }}
+          LLM_KEY: ${{ secrets.LLM_KEY }}
