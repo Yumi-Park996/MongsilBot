@@ -2,8 +2,6 @@ import java.net.*;
 import java.net.http.*;
 import java.nio.charset.StandardCharsets;
 import java.util.Random;
-import com.google.gson.Gson;
-import java.util.Map;
 
 public class MongsilBot {
     public static void main(String[] args) {
@@ -70,10 +68,13 @@ public class MongsilBot {
     }
 
     // ✅ Slack 메시지 전송 함수
-    private static final Gson gson = new Gson();
-
     private static void sendToSlack(String webhookUrl, String message) {
-        String requestBody = gson.toJson(Map.of("text", message));
+        // JSON 문자열을 직접 생성 (이스케이프 처리 포함)
+        String requestBody = "{ \"text\": \"" + message
+                .replace("\\", "\\\\")  // 역슬래시 이스케이프
+                .replace("\"", "\\\"")  // 큰따옴표 이스케이프
+                .replace("\n", "\\n")   // 줄바꿈 이스케이프
+                + "\" }";
 
         try {
             HttpClient client = HttpClient.newHttpClient();
@@ -94,4 +95,5 @@ public class MongsilBot {
             e.printStackTrace();
         }
     }
+
 }
