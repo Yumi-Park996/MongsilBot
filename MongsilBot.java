@@ -30,9 +30,8 @@ public class MongsilBot {
         String imageUrl = generateImage(llmUrl, llmKey, "A cute guinea pig named Mongsil comforting a tired person with a warm hug, soft colors, anime-style.");
         System.out.println("🖼️ 생성된 이미지 URL: " + imageUrl);
 
-        // ✅ 4. Slack으로 메시지 전송
-        String slackMessage = "🦙 *몽실봇*\n\n*질문:* " + question + "\n*답변:* " + llmResponseText;
-        sendToSlack(webhookUrl, slackMessage);
+        // ✅ 4. Slack으로 메시지 전송 (이미지 포함)
+        sendToSlack(webhookUrl, llmResponseText, imageUrl);
     }
 
     // ✅ Gemini API 호출 함수 (텍스트 응답)
@@ -59,7 +58,7 @@ public class MongsilBot {
         return "몽실이가 답변을 못 찾았어요! 😢";
     }
 
-       // ✅ Gemini API 호출 함수 (이미지 생성)
+   // ✅ Gemini API 호출 함수 (이미지 생성)
     private static String generateImage(String llmUrl, String llmKey, String prompt) {
         String requestBody = "{ \"contents\": [ { \"parts\": [ { \"text\": \"" + prompt + "\" } ] } ] }";
 
@@ -74,14 +73,14 @@ public class MongsilBot {
             HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString());
 
             if (response.statusCode() == 200) {
-                String responseBody = response.body();
-                return extractImageUrlFromGeminiResponse(responseBody);
+                return extractImageUrlFromGeminiResponse(response.body());
             }
         } catch (Exception e) {
             e.printStackTrace();
         }
         return "몽실이가 이미지를 생성하지 못했어요! 😢";
     }
+
 
     // ✅ Gemini 응답에서 텍스트 추출
     private static String extractTextFromGeminiResponse(String responseBody) {
@@ -95,21 +94,27 @@ public class MongsilBot {
         return responseBody.substring(textStart + 1, textEnd);
     }
 
-    // ✅ Gemini 응답에서 이미지 URL 추출
+    // ✅ Gemini 응답에서 이미지 URL 추출 (JSON 정교한 분석)
     private static String extractImageUrlFromGeminiResponse(String responseBody) {
-        int urlStart = responseBody.indexOf("\"url\":");
+        int urlStart = responseBody.indexOf("\"url\":\"");
         if (urlStart == -1) return "이미지를 찾을 수 없음";
 
-        urlStart += 7;
+        urlStart += 7; // "url":" 이후 시작 위치
         int urlEnd = responseBody.indexOf("\"", urlStart);
         if (urlEnd == -1) return "이미지 URL 파싱 오류";
 
         return responseBody.substring(urlStart, urlEnd);
     }
 
-    // ✅ Slack 메시지 전송 함수
-    private static void sendToSlack(String webhookUrl, String message) {
-        String requestBody = "{ \"text\": \"" + message.replace("\"", "\\\"") + "\" }";
+    // ✅ Slack 메시지 전송 함수 (이미지 포함)
+    private static void sendToSlack(String webhookUrl, String message, String imageUrl) {
+        String requestBody = "{"
+            + "\"text\": \"" + message.replace("\"", "\\\"") + "\","
+            + "\"attachments\": [{"
+            + "\"image_url\": \"" + imageUrl + "\","
+            + "\"fallback\": \"이미지를 불러올 수 없습니다.\""
+            + "}]"
+            + "}";
 
         try {
             HttpClient client = HttpClient.newHttpClient();
