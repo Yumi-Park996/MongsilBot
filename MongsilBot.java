@@ -2,6 +2,8 @@ import java.net.*;
 import java.net.http.*;
 import java.nio.charset.StandardCharsets;
 import java.util.Random;
+import com.google.gson.Gson;
+import java.util.Map;
 
 public class MongsilBot {
     public static void main(String[] args) {
@@ -12,12 +14,12 @@ public class MongsilBot {
 
         // ✅ 1. 랜덤 질문 생성 (위로 메시지 요청)
         String[] questions = {
-            "뀨우뀨우 안녕! 몽실아, 오늘도 힘들게 하루를 보낸 집사님을 위해 250자 이내의 따뜻한 위로와 명언 메시지를 전해줄래?🐹💖",
-            "뀨우뀨우 안녕! 몽실아, 누군가 오늘 힘든 하루를 보냈대. 위로가 될 수 있는 250자 이내의 다정한 메시지와 명언을 전해볼래?🐹💖",
-            "뀨우뀨우 안녕! 몽실아, 집사님이 지쳤대. 네가 줄 수 있는 250자 이내의 가장 따뜻한 격려와 응원의 말과 명언을 전달해줄 수 있을까?🐹💖",
-            "뀨우뀨우 안녕! 몽실아, 오늘 하루도 열심히 살아낸 집사님에게 너의 사랑스러운 말로 힘이 되는 250자 이내의 메시지와 명언을 전해줘!🐹💖",
-            "뀨우뀨우 안녕! 몽실아, 때로는 힘든 날도 있는 법이지? 지금 힘들어하는 사람들에게 너만의 방식으로 용기와 명언을 250자 이내의 메시지로 줄 수 있을까?🐹💖",
-            "뀨우뀨우 안녕! 몽실아, 세상은 가끔 힘들지만, 너의 귀여운 응원이 있다면 괜찮아질 것 같아. 위로와 용기의 메시지와 명언을 250자 이내로 보내줄래?🐹💖"
+            "뀨우뀨우 안녕! 몽실아, 오늘도 힘들게 하루를 보낸 집사님을 위해 300자 이내의 따뜻한 위로와 명언 메시지를 전해줄래?🐹💖",
+            "뀨우뀨우 안녕! 몽실아, 누군가 오늘 힘든 하루를 보냈대. 위로가 될 수 있는 300자 이내의 다정한 메시지와 명언을 전해볼래?🐹💖",
+            "뀨우뀨우 안녕! 몽실아, 집사님이 지쳤대. 네가 줄 수 있는 300자 이내의 가장 따뜻한 격려와 응원의 말과 명언을 전달해줄 수 있을까?🐹💖",
+            "뀨우뀨우 안녕! 몽실아, 오늘 하루도 열심히 살아낸 집사님에게 너의 사랑스러운 말로 힘이 되는 300자 이내의 메시지와 명언을 전해줘!🐹💖",
+            "뀨우뀨우 안녕! 몽실아, 때로는 힘든 날도 있는 법이지? 지금 힘들어하는 사람들에게 너만의 방식으로 용기와 명언을 300자 이내의 메시지로 줄 수 있을까?🐹💖",
+            "뀨우뀨우 안녕! 몽실아, 세상은 가끔 힘들지만, 너의 귀여운 응원이 있다면 괜찮아질 것 같아. 위로와 용기의 메시지와 명언을 300자 이내로 보내줄래?🐹💖"
         };
         String question = questions[new Random().nextInt(questions.length)];
         System.out.println("📝 몽실봇 질문: " + question);
@@ -68,8 +70,10 @@ public class MongsilBot {
     }
 
     // ✅ Slack 메시지 전송 함수
+    private static final Gson gson = new Gson();
+
     private static void sendToSlack(String webhookUrl, String message) {
-        String requestBody = "{ \"text\": \"" + message.replace("\"", "\\\"") + "\" }";
+        String requestBody = gson.toJson(Map.of("text", message));
 
         try {
             HttpClient client = HttpClient.newHttpClient();
@@ -84,10 +88,9 @@ public class MongsilBot {
             if (response.statusCode() == 200) {
                 System.out.println("✅ Slack 메시지 전송 완료!");
             } else {
-                System.out.println("❌ Slack 전송 실패: " + response.statusCode());
+                System.out.println("❌ Slack 전송 실패: " + response.statusCode() + " - " + response.body());
             }
         } catch (Exception e) {
             e.printStackTrace();
         }
     }
-}
