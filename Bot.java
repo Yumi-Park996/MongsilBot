@@ -2,6 +2,8 @@ import java.net.*;
 import java.net.http.*;
 import java.nio.charset.StandardCharsets;
 import java.util.*;
+import org.json.JSONObject;
+import org.json.JSONArray;
 
 public class Bot {
     public static void main(String[] args) {
@@ -11,13 +13,13 @@ public class Bot {
         String llmUrl = System.getenv("LLM_URL");
         String llmKey = System.getenv("LLM_KEY");
 
-        // LLM 요청 JSON 문자열 생성 (JSON 객체 대신 String으로 직접 작성)
+        // LLM 요청 JSON 생성
         String llmRequestBody = "{ \"contents\": [ { \"parts\": [ { \"text\": \"" + message + "\" } ] } ] }";
 
         // LLM API 요청 설정
         HttpClient llmClient = HttpClient.newHttpClient();
         HttpRequest llmRequest = HttpRequest.newBuilder()
-            .uri(URI.create(llmUrl + "?key=" + llmKey))  // 인증키는 URL에 추가
+            .uri(URI.create(llmUrl + "?key=" + llmKey))  // 인증키 추가
             .header("Content-Type", "application/json")
             .POST(HttpRequest.BodyPublishers.ofString(llmRequestBody, StandardCharsets.UTF_8))
             .build();
@@ -30,7 +32,18 @@ public class Bot {
             );
 
             if (llmResponse.statusCode() == 200) {
-                llmResponseText = llmResponse.body();
+                // JSON 파싱하여 필요한 부분만 추출
+                JSONObject responseJson = new JSONObject(llmResponse.body());
+                JSONArray candidates = responseJson.getJSONArray("candidates");
+
+                if (candidates.length() > 0) {
+                    JSONObject content = candidates.getJSONObject(0).getJSONObject("content");
+                    JSONArray parts = content.getJSONArray("parts");
+
+                    if (parts.length() > 0) {
+                        llmResponseText = parts.getJSONObject(0).getString("text");
+                    }
+                }
             } else {
                 llmResponseText = "LLM 응답 실패: " + llmResponse.statusCode();
             }
@@ -39,7 +52,7 @@ public class Bot {
             llmResponseText = "LLM 요청 중 오류 발생";
         }
 
-        // Slack 메시지 JSON 문자열 생성
+        // Slack 메시지 JSON 생성 (필요한 응답 텍스트만 보냄)
         String slackRequestBody = "{ \"text\": \"" + llmResponseText.replace("\"", "\\\"") + "\" }";
 
         // Slack API 요청 설정
