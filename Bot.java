@@ -1,9 +1,6 @@
 import java.net.*;
 import java.net.http.*;
 import java.nio.charset.StandardCharsets;
-import java.util.*;
-import org.json.JSONObject;
-import org.json.JSONArray;
 
 public class Bot {
     public static void main(String[] args) {
@@ -13,18 +10,18 @@ public class Bot {
         String llmUrl = System.getenv("LLM_URL");
         String llmKey = System.getenv("LLM_KEY");
 
-        // LLM 요청 JSON 생성
+        // LLM 요청 JSON 문자열 생성
         String llmRequestBody = "{ \"contents\": [ { \"parts\": [ { \"text\": \"" + message + "\" } ] } ] }";
 
         // LLM API 요청 설정
         HttpClient llmClient = HttpClient.newHttpClient();
         HttpRequest llmRequest = HttpRequest.newBuilder()
-            .uri(URI.create(llmUrl + "?key=" + llmKey))  // 인증키 추가
+            .uri(URI.create(llmUrl + "?key=" + llmKey))  // API 키를 URL에 포함
             .header("Content-Type", "application/json")
             .POST(HttpRequest.BodyPublishers.ofString(llmRequestBody, StandardCharsets.UTF_8))
             .build();
 
-        String llmResponseText = ""; // LLM 응답 메시지
+        String llmResponseText = "LLM 응답 실패"; // 기본 메시지
 
         try {
             HttpResponse<String> llmResponse = llmClient.send(
@@ -32,18 +29,8 @@ public class Bot {
             );
 
             if (llmResponse.statusCode() == 200) {
-                // JSON 파싱하여 필요한 부분만 추출
-                JSONObject responseJson = new JSONObject(llmResponse.body());
-                JSONArray candidates = responseJson.getJSONArray("candidates");
-
-                if (candidates.length() > 0) {
-                    JSONObject content = candidates.getJSONObject(0).getJSONObject("content");
-                    JSONArray parts = content.getJSONArray("parts");
-
-                    if (parts.length() > 0) {
-                        llmResponseText = parts.getJSONObject(0).getString("text");
-                    }
-                }
+                String responseBody = llmResponse.body();
+                llmResponseText = extractTextFromLLMResponse(responseBody);
             } else {
                 llmResponseText = "LLM 응답 실패: " + llmResponse.statusCode();
             }
@@ -52,7 +39,7 @@ public class Bot {
             llmResponseText = "LLM 요청 중 오류 발생";
         }
 
-        // Slack 메시지 JSON 생성 (필요한 응답 텍스트만 보냄)
+        // Slack 메시지 JSON 문자열 생성
         String slackRequestBody = "{ \"text\": \"" + llmResponseText.replace("\"", "\\\"") + "\" }";
 
         // Slack API 요청 설정
@@ -72,5 +59,22 @@ public class Bot {
         } catch (Exception e) {
             e.printStackTrace();
         }
+    }
+
+    // ✅ LLM 응답에서 순수 텍스트만 추출하는 메서드 (JSON 파싱 없이)
+    private static String extractTextFromLLMResponse(String responseBody) {
+        // "text": "~~~" 부분에서 텍스트만 추출
+        int textStart = responseBody.indexOf("\"text\":");
+        if (textStart == -1) {
+            return "LLM 응답에서 텍스트를 찾을 수 없음";
+        }
+
+        textStart += 8; // `"text":` 이후 시작 위치
+        int textEnd = responseBody.indexOf("\"", textStart + 1);
+        if (textEnd == -1) {
+            return "LLM 응답 파싱 오류";
+        }
+
+        return responseBody.substring(textStart + 1, textEnd);
     }
 }
