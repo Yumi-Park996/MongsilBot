@@ -26,12 +26,16 @@ public class MongsilBot {
         String llmResponseText = getGeminiResponse(llmUrl, llmKey, question);
         System.out.println("🤖 몽실이의 답변: " + llmResponseText);
 
-        // ✅ 3. Slack으로 메시지 전송
+        // ✅ 3. Gemini API 요청 (이미지 생성)
+        String imageUrl = generateImage(llmUrl, llmKey, "A cute guinea pig named Mongsil comforting a tired person with a warm hug, soft colors, anime-style.");
+        System.out.println("🖼️ 생성된 이미지 URL: " + imageUrl);
+
+        // ✅ 4. Slack으로 메시지 전송
         String slackMessage = "🦙 *몽실봇*\n\n*질문:* " + question + "\n*답변:* " + llmResponseText;
         sendToSlack(webhookUrl, slackMessage);
     }
 
-    // ✅ Gemini API 호출 함수
+    // ✅ Gemini API 호출 함수 (텍스트 응답)
     private static String getGeminiResponse(String llmUrl, String llmKey, String question) {
         String requestBody = "{ \"contents\": [ { \"parts\": [ { \"text\": \"" + question + "\" } ] } ] }";
 
@@ -55,6 +59,30 @@ public class MongsilBot {
         return "몽실이가 답변을 못 찾았어요! 😢";
     }
 
+       // ✅ Gemini API 호출 함수 (이미지 생성)
+    private static String generateImage(String llmUrl, String llmKey, String prompt) {
+        String requestBody = "{ \"contents\": [ { \"parts\": [ { \"text\": \"" + prompt + "\" } ] } ] }";
+
+        try {
+            HttpClient client = HttpClient.newHttpClient();
+            HttpRequest request = HttpRequest.newBuilder()
+                .uri(URI.create(llmUrl + "?key=" + llmKey))
+                .header("Content-Type", "application/json")
+                .POST(HttpRequest.BodyPublishers.ofString(requestBody, StandardCharsets.UTF_8))
+                .build();
+
+            HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString());
+
+            if (response.statusCode() == 200) {
+                String responseBody = response.body();
+                return extractImageUrlFromGeminiResponse(responseBody);
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        return "몽실이가 이미지를 생성하지 못했어요! 😢";
+    }
+
     // ✅ Gemini 응답에서 텍스트 추출
     private static String extractTextFromGeminiResponse(String responseBody) {
         int textStart = responseBody.indexOf("\"text\":");
@@ -65,6 +93,18 @@ public class MongsilBot {
         if (textEnd == -1) return "응답 파싱 오류";
 
         return responseBody.substring(textStart + 1, textEnd);
+    }
+
+    // ✅ Gemini 응답에서 이미지 URL 추출
+    private static String extractImageUrlFromGeminiResponse(String responseBody) {
+        int urlStart = responseBody.indexOf("\"url\":");
+        if (urlStart == -1) return "이미지를 찾을 수 없음";
+
+        urlStart += 7;
+        int urlEnd = responseBody.indexOf("\"", urlStart);
+        if (urlEnd == -1) return "이미지 URL 파싱 오류";
+
+        return responseBody.substring(urlStart, urlEnd);
     }
 
     // ✅ Slack 메시지 전송 함수
