@@ -19,23 +19,18 @@ public class MongsilBot {
             "뀨우뀨우 안녕! 몽실아, 세상은 가끔 힘들지만, 너의 귀여운 응원이 있다면 괜찮아질 것 같아. 위로와 용기의 메시지와 명언을 300자 이내로 보내줄래?🐹💖"
         };
         String question = questions[new Random().nextInt(questions.length)];
-
         System.out.println("📝 몽실봇 질문: " + question);
 
         // ✅ 2. Gemini API 요청
         String llmResponseText = getGeminiResponse(llmUrl, llmKey, question);
-        String slackMessage = "🦙 *몽실봇*\n\n*질문:* " + question + "\n*답변:* " + llmResponseText;
         System.out.println("🤖 몽실이의 답변: " + llmResponseText);
 
-        // ✅ 3. Gemini API 요청 (이미지 생성)
-        String imageUrl = generateImage(llmUrl, llmKey, "A cute guinea pig named Mongsil comforting a tired person with a warm hug, soft colors, anime-style.");
-        System.out.println("🖼️ 생성된 이미지 URL: " + imageUrl);
-
-        // ✅ 4. Slack으로 메시지 전송 (이미지 포함)
-        sendToSlack(webhookUrl, slackMessage, imageUrl);
+        // ✅ 3. Slack으로 메시지 전송
+        String slackMessage = "🦙 *몽실봇*\n\n*질문:* " + question + "\n*답변:* " + llmResponseText;
+        sendToSlack(webhookUrl, slackMessage);
     }
 
-    // ✅ Gemini API 호출 함수 (텍스트 응답)
+    // ✅ Gemini API 호출 함수
     private static String getGeminiResponse(String llmUrl, String llmKey, String question) {
         String requestBody = "{ \"contents\": [ { \"parts\": [ { \"text\": \"" + question + "\" } ] } ] }";
 
@@ -59,26 +54,6 @@ public class MongsilBot {
         return "몽실이가 답변을 못 찾았어요! 😢";
     }
 
-    // ✅ Gemini API에서 이미지 URL 올바르게 추출
-    private static String extractImageUrlFromGeminiResponse(String responseBody) {
-        try {
-            // API 응답 로그 출력 (디버깅용)
-            System.out.println("📩 Gemini 이미지 API 응답: " + responseBody);
-
-            int urlStart = responseBody.indexOf("\"url\":\"");
-            if (urlStart == -1) return "이미지를 찾을 수 없음";
-
-            urlStart += 7; // "url":" 이후 시작 위치
-            int urlEnd = responseBody.indexOf("\"", urlStart);
-            if (urlEnd == -1) return "이미지 URL 파싱 오류";
-
-            return responseBody.substring(urlStart, urlEnd);
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
-        return "이미지를 찾을 수 없음";
-    }
-
     // ✅ Gemini 응답에서 텍스트 추출
     private static String extractTextFromGeminiResponse(String responseBody) {
         int textStart = responseBody.indexOf("\"text\":");
@@ -91,33 +66,9 @@ public class MongsilBot {
         return responseBody.substring(textStart + 1, textEnd);
     }
 
-    // ✅ Gemini 응답에서 이미지 URL 추출 (JSON 정교한 분석)
-    private static String extractImageUrlFromGeminiResponse(String responseBody) {
-        int urlStart = responseBody.indexOf("\"url\":\"");
-        if (urlStart == -1) return "이미지를 찾을 수 없음";
-
-        urlStart += 7; // "url":" 이후 시작 위치
-        int urlEnd = responseBody.indexOf("\"", urlStart);
-        if (urlEnd == -1) return "이미지 URL 파싱 오류";
-
-        return responseBody.substring(urlStart, urlEnd);
-    }
-
-    // ✅ Slack 메시지 JSON 포맷 수정 (개행문자, 따옴표 처리)
-    private static void sendToSlack(String webhookUrl, String message, String imageUrl) {
-        // 메시지 JSON-friendly 변환
-        String safeMessage = message.replace("\"", "\\\"").replace("\n", "\\n");
-
-        // 이미지가 있을 경우와 없을 경우 구분해서 JSON 생성
-        String imageAttachment = imageUrl.contains("http") ?
-            ", \"attachments\": [{\"text\": \"몽실이의 따뜻한 위로 메시지와 함께 이미지를 확인하세요!\", \"image_url\": \"" + imageUrl + "\"}]" :
-            "";
-
-        // 최종 Slack 메시지 JSON
-        String requestBody = "{"
-            + "\"text\": \"" + safeMessage + "\""
-            + imageAttachment
-            + "}";
+    // ✅ Slack 메시지 전송 함수
+    private static void sendToSlack(String webhookUrl, String message) {
+        String requestBody = "{ \"text\": \"" + message.replace("\"", "\\\"") + "\" }";
 
         try {
             HttpClient client = HttpClient.newHttpClient();
@@ -128,9 +79,6 @@ public class MongsilBot {
                 .build();
 
             HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString());
-
-            // ✅ Slack 응답을 확인해서 오류 여부 확인
-            System.out.println("📩 Slack API 응답: " + response.body());
 
             if (response.statusCode() == 200) {
                 System.out.println("✅ Slack 메시지 전송 완료!");
