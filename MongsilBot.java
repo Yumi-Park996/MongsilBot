@@ -74,8 +74,9 @@ public class MongsilBot {
                 .replace("\\", "\\\\")  // 역슬래시 이스케이프
                 .replace("\"", "\\\"")  // 큰따옴표 이스케이프
                 .replace("\n", "\\n")   // 줄바꿈 이스케이프
+                .replace("\n\n", "\\n") // 2줄 이상 연속 줄바꿈 방지
                 + "\" }";
-
+                
         try {
             HttpClient client = HttpClient.newHttpClient();
             HttpRequest request = HttpRequest.newBuilder()
