@@ -1,7 +1,9 @@
-name: send message
+name: mongsil-bot
 
 on:
   workflow_dispatch:
+  schedule:
+    - cron: '*/30 * * * *'  # ⏰ 30분마다 실행 (예: 12:00, 12:30, 13:00, 13:30 ...)
 
 jobs:
   send-message:
@@ -18,10 +20,10 @@ jobs:
 
       - name: Compile and Run Bot
         run: |
-          javac Bot.java
-          java Bot
+          javac MongsilBot.java
+          java MongsilBot
         env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
-          SLACK_WEBHOOK_MSG: ${{ vars.SLACK_WEBHOOK_MSG }}
           LLM_URL: ${{ vars.LLM_URL }}
           LLM_KEY: ${{ secrets.LLM_KEY }}

@@ -1,6 +1,6 @@
 # slack_incoming_hook
 
 ```
- - bot.java
+ - MongsilBot.java
  - .github/workflows/send-message.yml
 ```
