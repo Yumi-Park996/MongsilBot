@@ -9,6 +9,7 @@ public class MongsilBot {
         String webhookUrl = System.getenv("SLACK_WEBHOOK_URL");
         String llmUrl = System.getenv("LLM_URL");
         String llmKey = System.getenv("LLM_KEY");
+
         // ✅ 1. 랜덤 질문 생성 (위로 메시지 요청)
         String[] questions = {
             "뀨우뀨우 안녕! 몽실아, 오늘도 힘들게 하루를 보낸 집사님을 위해 300자 이내의 따뜻한 위로와 명언 메시지를 전해줄래?🐹💖",
@@ -54,7 +55,7 @@ public class MongsilBot {
         return "몽실이가 답변을 못 찾았어요! 😢";
     }
 
-    // ✅ Gemini 응답에서 텍스트 추출 (개행 문자 유지)
+    // ✅ Gemini 응답에서 텍스트 추출
     private static String extractTextFromGeminiResponse(String responseBody) {
         int textStart = responseBody.indexOf("\"text\":");
         if (textStart == -1) return "답변을 찾을 수 없음";
@@ -63,20 +64,12 @@ public class MongsilBot {
         int textEnd = responseBody.indexOf("\"", textStart + 1);
         if (textEnd == -1) return "응답 파싱 오류";
 
-        // 추출된 텍스트를 JSON Escape 처리 (큰따옴표만 변환)
-        String extractedText = responseBody.substring(textStart + 1, textEnd);
-        extractedText = extractedText.replace("\"", "\\\""); // 개행 문자 \n 은 그대로 둠
-
-        return extractedText;
+        return responseBody.substring(textStart + 1, textEnd);
     }
 
-    // ✅ Slack 메시지 전송 함수 (JSON Escape 처리 수정)
+    // ✅ Slack 메시지 전송 함수
     private static void sendToSlack(String webhookUrl, String message) {
-        // JSON-friendly 변환 (큰따옴표만 Escape)
-        String safeMessage = message.replace("\"", "\\\"");
-
-        // Slack 메시지 JSON 생성
-        String requestBody = "{ \"text\": \"" + safeMessage + "\" }";
+        String requestBody = "{ \"text\": \"" + message.replace("\"", "\\\"") + "\" }";
 
         try {
             HttpClient client = HttpClient.newHttpClient();
@@ -87,9 +80,6 @@ public class MongsilBot {
                 .build();
 
             HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString());
-
-            // ✅ Slack 응답을 확인해서 오류 여부 확인
-            System.out.println("📩 Slack API 응답: " + response.body());
 
             if (response.statusCode() == 200) {
                 System.out.println("✅ Slack 메시지 전송 완료!");
