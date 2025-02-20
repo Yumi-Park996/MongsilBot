@@ -59,29 +59,25 @@ public class MongsilBot {
         return "몽실이가 답변을 못 찾았어요! 😢";
     }
 
-   // ✅ Gemini API 호출 함수 (이미지 생성)
-    private static String generateImage(String llmUrl, String llmKey, String prompt) {
-        String requestBody = "{ \"contents\": [ { \"parts\": [ { \"text\": \"" + prompt + "\" } ] } ] }";
-
+    // ✅ Gemini API에서 이미지 URL 올바르게 추출
+    private static String extractImageUrlFromGeminiResponse(String responseBody) {
         try {
-            HttpClient client = HttpClient.newHttpClient();
-            HttpRequest request = HttpRequest.newBuilder()
-                .uri(URI.create(llmUrl + "?key=" + llmKey))
-                .header("Content-Type", "application/json")
-                .POST(HttpRequest.BodyPublishers.ofString(requestBody, StandardCharsets.UTF_8))
-                .build();
+            // API 응답 로그 출력 (디버깅용)
+            System.out.println("📩 Gemini 이미지 API 응답: " + responseBody);
 
-            HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString());
+            int urlStart = responseBody.indexOf("\"url\":\"");
+            if (urlStart == -1) return "이미지를 찾을 수 없음";
 
-            if (response.statusCode() == 200) {
-                return extractImageUrlFromGeminiResponse(response.body());
-            }
+            urlStart += 7; // "url":" 이후 시작 위치
+            int urlEnd = responseBody.indexOf("\"", urlStart);
+            if (urlEnd == -1) return "이미지 URL 파싱 오류";
+
+            return responseBody.substring(urlStart, urlEnd);
         } catch (Exception e) {
             e.printStackTrace();
         }
-        return "몽실이가 이미지를 생성하지 못했어요! 😢";
+        return "이미지를 찾을 수 없음";
     }
-
 
     // ✅ Gemini 응답에서 텍스트 추출
     private static String extractTextFromGeminiResponse(String responseBody) {
@@ -107,15 +103,20 @@ public class MongsilBot {
         return responseBody.substring(urlStart, urlEnd);
     }
 
-    // ✅ Slack 메시지 전송 함수 (이미지 포함)
+    // ✅ Slack 메시지 JSON 포맷 수정 (개행문자, 따옴표 처리)
     private static void sendToSlack(String webhookUrl, String message, String imageUrl) {
+        // 메시지 JSON-friendly 변환
+        String safeMessage = message.replace("\"", "\\\"").replace("\n", "\\n");
+
+        // 이미지가 있을 경우와 없을 경우 구분해서 JSON 생성
+        String imageAttachment = imageUrl.contains("http") ?
+            ", \"attachments\": [{\"text\": \"몽실이의 따뜻한 위로 메시지와 함께 이미지를 확인하세요!\", \"image_url\": \"" + imageUrl + "\"}]" :
+            "";
+
+        // 최종 Slack 메시지 JSON
         String requestBody = "{"
-            + "\"text\": \"" + message.replace("\"", "\\\"") + "\","
-            + "\"attachments\": [{"
-            + "\"text\": \"몽실이의 따뜻한 위로 메시지와 함께 이미지를 확인하세요!\","
-            + "\"image_url\": \"" + imageUrl + "\","
-            + "\"fallback\": \"이미지를 불러올 수 없습니다.\""
-            + "}]"
+            + "\"text\": \"" + safeMessage + "\""
+            + imageAttachment
             + "}";
 
         try {
