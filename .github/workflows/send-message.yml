@@ -1,4 +1,4 @@
-name: mongsil-bot
+name: MongsilBot
 
 on:
   workflow_dispatch:
