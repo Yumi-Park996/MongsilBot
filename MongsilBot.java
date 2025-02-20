@@ -54,7 +54,7 @@ public class MongsilBot {
         return "몽실이가 답변을 못 찾았어요! 😢";
     }
 
-    // ✅ Gemini 응답에서 텍스트 추출
+    // ✅ Gemini 응답에서 텍스트 추출 (JSON Escape 처리 추가)
     private static String extractTextFromGeminiResponse(String responseBody) {
         int textStart = responseBody.indexOf("\"text\":");
         if (textStart == -1) return "답변을 찾을 수 없음";
@@ -63,12 +63,21 @@ public class MongsilBot {
         int textEnd = responseBody.indexOf("\"", textStart + 1);
         if (textEnd == -1) return "응답 파싱 오류";
 
-        return responseBody.substring(textStart + 1, textEnd);
+        // 추출된 텍스트를 JSON Escape 처리
+        String extractedText = responseBody.substring(textStart + 1, textEnd);
+        extractedText = extractedText.replace("\"", "\\\"").replace("\n", "\\n");
+
+        return extractedText;
     }
 
-    // ✅ Slack 메시지 전송 함수
+
+// ✅ Slack 메시지 전송 함수 (JSON Escape 처리 추가)
     private static void sendToSlack(String webhookUrl, String message) {
-        String requestBody = "{ \"text\": \"" + message.replace("\"", "\\\"") + "\" }";
+        // JSON-friendly 변환 (큰따옴표 및 개행문자 처리)
+        String safeMessage = message.replace("\"", "\\\"").replace("\n", "\\n");
+
+        // Slack 메시지 JSON 생성
+        String requestBody = "{ \"text\": \"" + safeMessage + "\" }";
 
         try {
             HttpClient client = HttpClient.newHttpClient();
@@ -79,6 +88,9 @@ public class MongsilBot {
                 .build();
 
             HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString());
+
+            // ✅ Slack 응답을 확인해서 오류 여부 확인
+            System.out.println("📩 Slack API 응답: " + response.body());
 
             if (response.statusCode() == 200) {
                 System.out.println("✅ Slack 메시지 전송 완료!");
