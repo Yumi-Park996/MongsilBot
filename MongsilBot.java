@@ -2,6 +2,8 @@ import java.net.*;
 import java.net.http.*;
 import java.nio.charset.StandardCharsets;
 import java.util.Random;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 public class MongsilBot {
     public static void main(String[] args) {
@@ -25,10 +27,21 @@ public class MongsilBot {
         // ✅ 2. Gemini API 요청
         String llmResponseText = getGeminiResponse(llmUrl, llmKey, question);
         System.out.println("🤖 몽실이의 답변: " + llmResponseText);
+        
+        // LLM을 사용해 이미지 생성
+        String image_url = getTogetherResponse("Create an animated-style illustration with a warm and bright atmosphere, depicting a cute guinea pig and a human together. The guinea pig has large, sparkling eyes and soft fur, making it an adorable character with a playful and lively expression. The human appears friendly and warm, interacting with the guinea pig by gently petting it or playing together.
+The background should be a cozy indoor living room or a sunlit park, with bright and soft pastel tones. The animation style should resemble The Secret Life of Pets, capturing a similar aesthetic.");
+        System.out.println("image url = " + image_url);
+
+        // GitHub Issue 생성
 
         // ✅ 3. Slack으로 메시지 전송
         String slackMessage = "🦙 *몽실봇*\n\n*질문:* " + question + "\n*답변:* " + llmResponseText;
-        sendToSlack(webhookUrl, slackMessage);
+        sendToSlack(webhookUrl, slackMessage, image_url);
+    }
+
+    public static String getTogetherResponse(String prompt) {
+        return callLLMApi2(prompt);
     }
 
     // ✅ Gemini API 호출 함수
@@ -67,14 +80,68 @@ public class MongsilBot {
         return responseBody.substring(textStart + 1, textEnd);
     }
 
+     public static String callLLMApi2(String prompt) {
+        String apiUrl = System.getenv("LLM2_API_URL");
+        String apiKey = System.getenv("LLM2_API_KEY");
+        String model = System.getenv("LLM2_MODEL");
+
+        String payload = """
+                {
+                "prompt": "%s",
+                "model": "%s",
+                "width": 640,
+                "height": 640,
+                "steps": 4,
+                "n": 1
+                
+                }
+                """.formatted(prompt, model);
+
+        HttpClient client = HttpClient.newHttpClient();
+        HttpRequest request = HttpRequest.newBuilder()
+                .uri(URI.create(apiUrl))
+                .header("Content-Type", "application/json")
+                .header("Authorization", "Bearer " + apiKey)
+                .POST(HttpRequest.BodyPublishers.ofString(payload, StandardCharsets.UTF_8))
+                .build();
+
+        try {
+            HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString());
+
+            System.out.println("response.statusCode() = " + response.statusCode());
+            System.out.println("response.body() = " + response.body());
+
+            if (response.statusCode() == 200) {
+                return  extractImageUrl(response.body());
+            } else {
+                return "LLM API 오류: " + response.statusCode();
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+            return "예외 발생: " + e.getMessage();
+        }
+    }
+
+    public static String extractImageUrl(String json) {
+        // 정규식 패턴: "url": "이미지 URL"
+        Pattern pattern = Pattern.compile("\"url\"\\s*:\\s*\"(https?://[^\"]+)\"");
+        Matcher matcher = pattern.matcher(json);
+
+        if (matcher.find()) {
+            return matcher.group(1); // 첫 번째 URL 반환
+        }
+        return "응답에서 이미지 URL을 찾을 수 없음";
+    }
+
     // ✅ Slack 메시지 전송 함수
-    private static void sendToSlack(String webhookUrl, String message) {
+    private static void sendToSlack(String webhookUrl, String message, String imageUrl) {
         // JSON 문자열을 직접 생성 (이스케이프 처리 포함)
         String requestBody = "{ \"text\": \"" + message
                 .replace("\\", "\\\\")  // 역슬래시 이스케이프
                 .replace("\"", "\\\"")  // 큰따옴표 이스케이프
                 .replace("\n", "\\n")   // 줄바꿈 이스케이프
-                + "\" }";
+                + "\", "
+                + "\"attachments\": [{ \"image_url\": \"" + imageUrl + "\" }] }";
 
         try {
             HttpClient client = HttpClient.newHttpClient();
