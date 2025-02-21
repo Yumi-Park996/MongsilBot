@@ -29,8 +29,7 @@ public class MongsilBot {
         System.out.println("🤖 몽실이의 답변: " + llmResponseText);
         
         // LLM을 사용해 이미지 생성
-        String image_url = getTogetherResponse("Create an animated-style illustration with a warm and bright atmosphere, depicting a cute guinea pig and a human together. The guinea pig has large, sparkling eyes and soft fur, making it an adorable character with a playful and lively expression. The human appears friendly and warm, interacting with the guinea pig by gently petting it or playing together.
-The background should be a cozy indoor living room or a sunlit park, with bright and soft pastel tones. The animation style should resemble The Secret Life of Pets, capturing a similar aesthetic.");
+        String image_url = getTogetherResponse("Create an animated-style illustration with a warm and bright atmosphere, depicting a cute guinea pig and a human together. The guinea pig has large, sparkling eyes and soft fur, making it an adorable character with a playful and lively expression. The human appears friendly and warm, interacting with the guinea pig by gently petting it or playing together.The background should be a cozy indoor living room or a sunlit park, with bright and soft pastel tones. The animation style should resemble The Secret Life of Pets, capturing a similar aesthetic.");
         System.out.println("image url = " + image_url);
 
         // GitHub Issue 생성
